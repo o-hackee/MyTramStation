@@ -1,0 +1,33 @@
+buildscript {
+  ext.kotlin_version = '1.4.10'
+
+  repositories {
+    mavenCentral()
+    jcenter()
+  }
+
+  dependencies {
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    classpath "com.github.jengelman.gradle.plugins:shadow:6.1.0"
+  }
+}
+
+group 'com.example.mytramstation'
+version '1.0'
+
+apply plugin: 'kotlin'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  implementation "com.amazon.alexa:ask-sdk:2.37.1"
+
+  implementation "com.squareup.retrofit2:retrofit:2.9.0"
+  implementation "com.squareup.retrofit2:converter-moshi:2.9.0"
+  implementation "com.squareup.moshi:moshi:1.11.0"
+  implementation "com.squareup.moshi:moshi-kotlin:1.11.0"
+}
