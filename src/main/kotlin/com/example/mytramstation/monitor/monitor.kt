@@ -1,5 +1,6 @@
 package com.example.mytramstation.monitor
 
+import com.example.mytramstation.StopLocation
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import retrofit2.Call
@@ -122,9 +123,9 @@ object Monitor {
 }
 
 object MonitorWorker {
-    fun getDepartures(towardsOpera: Boolean): Int {
+    fun getDepartures(stopLocation: StopLocation): Int {
         val request = Monitor.retrofitService
-        val call = request.getProperties(if (towardsOpera) 5939 else 5903)
+        val call = request.getProperties(stopLocation.id)
         return try {
             val response = call.execute()
             response.body()?.data?.monitors?.first()?.lines?.first()?.departures?.departure?.first()?.departureTime?.countdown

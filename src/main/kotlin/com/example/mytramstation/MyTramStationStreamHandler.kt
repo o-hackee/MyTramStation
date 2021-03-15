@@ -7,9 +7,10 @@ import com.amazon.ask.SkillStreamHandler
 class MyTramStationStreamHandler : SkillStreamHandler(
     Skills.standard()
         .addRequestHandlers(
-            NextTramDeparturesIntentHandler(),
             LaunchRequestHandler(),
             SessionEndedRequestHandler(),
+            NextTramDeparturesIntentHandler(),
+            BusesIntentHandler(),
             HelpIntentHandler(),
             FallbackIntentHandler(),
             CancelandStopIntentHandler(),
