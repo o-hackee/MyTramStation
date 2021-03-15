@@ -1,6 +1,5 @@
 package com.example.mytramstation.monitor
 
-import com.example.mytramstation.StopLocation
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import retrofit2.Call
@@ -110,6 +109,31 @@ data class wlVehicle(
     val linienId: Int
 )
 
+enum class MonitorIntentType {
+    Tram,
+    Bus
+}
+
+enum class StopLocation(
+    val id: Int
+) {
+    Inzersdorf2Oper(5939),
+    Inzersdorf2Baden(5903),
+    WillendorferGasse(1890), // 65A - Reumann, 66A - Liesing, 67B - Alterlaa
+    PurkytgasseBilla(1914); // 65A - Inz, 66A - Reumann, 67B - Alauda
+    // PurkytgasseKinsky(1936) // 65A ---- as Willendorf,
+    // PurkytgasseFar(1966) // 66A, 67B -- but it's closer
+
+    companion object {
+        fun from(intentType: MonitorIntentType, slotValue: String): StopLocation {
+            return when (intentType) {
+                MonitorIntentType.Tram -> if (slotValue.startsWith("oper")) Inzersdorf2Oper else Inzersdorf2Baden
+                MonitorIntentType.Bus -> if (slotValue.startsWith("will")) WillendorferGasse else PurkytgasseBilla
+            }
+        }
+    }
+}
+
 // TODO other request parameters
 interface MonitorService {
     @GET("monitor")
@@ -128,6 +152,7 @@ object MonitorWorker {
         val call = request.getProperties(stopLocation.id)
         return try {
             val response = call.execute()
+            // TODO several monitors for buses - one per line
             response.body()?.data?.monitors?.first()?.lines?.first()?.departures?.departure?.first()?.departureTime?.countdown
                 ?: -1
         } catch (_: Exception) {

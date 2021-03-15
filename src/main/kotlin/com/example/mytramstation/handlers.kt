@@ -14,8 +14,10 @@ import java.util.Optional
 
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillName
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillNamePronounce
+import com.example.mytramstation.monitor.MonitorIntentType
 
 import com.example.mytramstation.monitor.MonitorWorker
+import com.example.mytramstation.monitor.StopLocation
 import kotlin.concurrent.thread
 
 
@@ -93,30 +95,6 @@ class CancelandStopIntentHandler : RequestHandler {
     }
 }
 
-enum class MonitorIntentType {
-    Tram,
-    Bus
-}
-enum class StopLocation(
-    val id: Int
-) {
-    Inzersdorf2Oper(5939),
-    Inzersdorf2Baden(5903),
-    WillendorferGasse(1890),
-    // TODO Purkytgasse несколько
-    Purkytgasse1(1914),
-    Purkytgasse2(1936),
-    Purkytgasse3(1966);
-
-    companion object {
-        fun from(intentType: MonitorIntentType, slotValue: String): StopLocation {
-            when (intentType) {
-                MonitorIntentType.Tram -> return if (slotValue.startsWith("oper")) Inzersdorf2Oper else Inzersdorf2Baden
-                MonitorIntentType.Bus -> return if (slotValue.startsWith("will")) WillendorferGasse else Purkytgasse1
-            }
-        }
-    }
-}
 fun handleMonitorIntent(
     input: HandlerInput,
     intentRequest: IntentRequest,
