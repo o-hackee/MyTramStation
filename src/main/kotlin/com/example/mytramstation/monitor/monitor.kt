@@ -1,4 +1,4 @@
-package com.example.mytramstation
+package com.example.mytramstation.monitor
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory

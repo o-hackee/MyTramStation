@@ -3,10 +3,10 @@ package com.example.mytramstation
 import com.amazon.ask.dispatcher.request.handler.HandlerInput
 import com.amazon.ask.dispatcher.request.handler.RequestHandler
 import com.amazon.ask.dispatcher.request.handler.impl.IntentRequestHandler
-import com.amazon.ask.model.IntentRequest
-import com.amazon.ask.model.LaunchRequest
-import com.amazon.ask.model.Response
-import com.amazon.ask.model.SessionEndedRequest
+import com.amazon.ask.model.*
+import com.amazon.ask.model.services.directive.Header
+import com.amazon.ask.model.services.directive.SendDirectiveRequest
+import com.amazon.ask.model.services.directive.SpeakDirective
 import com.amazon.ask.request.Predicates.intentName
 import com.amazon.ask.request.Predicates.requestType
 
@@ -14,6 +14,8 @@ import java.util.Optional
 
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillName
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillNamePronounce
+
+import com.example.mytramstation.monitor.MonitorWorker
 
 
 const val prompt = "You can ask departures in the specified direction"
@@ -56,7 +58,6 @@ class HelpIntentHandler : RequestHandler {
         return input.responseBuilder
                 .withSpeech(speechText)
                 .withSimpleCard(skillName, speechText)
-                .withReprompt(speechText)
                 .build()
     }
 }
@@ -68,11 +69,10 @@ class FallbackIntentHandler : RequestHandler {
     }
 
     override fun handle(input: HandlerInput): Optional<Response> {
-        val speechText = "Sorry, I don't know that. You can say try saying help!"
+        val speechText = "Sorry, I don't know that. You can try saying help!"
         return input.responseBuilder
                 .withSpeech(speechText)
                 .withSimpleCard(skillName, speechText)
-                .withReprompt(speechText)
                 .build()
     }
 }
@@ -100,17 +100,20 @@ class NextTramDeparturesIntentHandler: IntentRequestHandler {
     }
 
     override fun handle(input: HandlerInput, intentRequest: IntentRequest): Optional<Response> {
-        val intent = intentRequest.intent
-        val slotValue = intent.slots["tramDirection"]?.value ?: ""
+        val slotValue = intentRequest.intent.slots["tramDirection"]?.value ?: ""
+        val directiveText = "getting departures in direction of $slotValue"
+        val sendDirectiveRequest = SendDirectiveRequest.builder()
+            .withHeader(Header.builder().withRequestId(intentRequest.requestId).build())
+            .withDirective(SpeakDirective.builder().withSpeech(directiveText).build())
+            .build()
+        input.serviceClientFactory.directiveService.enqueue(sendDirectiveRequest) // TODO sdelat' async??
 
         val minutes = MonitorWorker.getDepartures(slotValue.startsWith("oper"))
-        var speechText = "working on it, got slot as $slotValue. "
-        speechText += if (minutes < 0) "Failed to execute a request"
+        val speechText = if (minutes < 0) "Failed to execute a request"
         else "Next departure is in $minutes minutes"
         return input.responseBuilder
             .withSpeech(speechText)
             .withSimpleCard(skillName, speechText)
-            .withReprompt(speechText)
             .build()
     }
 }
