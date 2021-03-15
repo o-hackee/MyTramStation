@@ -16,6 +16,7 @@ import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillName
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillNamePronounce
 
 import com.example.mytramstation.monitor.MonitorWorker
+import kotlin.concurrent.thread
 
 
 const val prompt = "You can ask departures in the specified direction"
@@ -92,7 +93,6 @@ class CancelandStopIntentHandler : RequestHandler {
     }
 }
 
-// TODO peredelat' na IntentRequestHandler ostal'nye 3?
 
 class NextTramDeparturesIntentHandler: IntentRequestHandler {
     override fun canHandle(input: HandlerInput, intentRequest: IntentRequest): Boolean {
@@ -101,19 +101,24 @@ class NextTramDeparturesIntentHandler: IntentRequestHandler {
 
     override fun handle(input: HandlerInput, intentRequest: IntentRequest): Optional<Response> {
         val slotValue = intentRequest.intent.slots["tramDirection"]?.value ?: ""
-        val directiveText = "getting departures in direction of $slotValue"
-        val sendDirectiveRequest = SendDirectiveRequest.builder()
-            .withHeader(Header.builder().withRequestId(intentRequest.requestId).build())
-            .withDirective(SpeakDirective.builder().withSpeech(directiveText).build())
-            .build()
-        input.serviceClientFactory.directiveService.enqueue(sendDirectiveRequest) // TODO sdelat' async??
+
+        val progressiveResponseThread = thread {
+            val directiveText = "getting departures in the direction of $slotValue"
+            val sendDirectiveRequest = SendDirectiveRequest.builder()
+                .withHeader(Header.builder().withRequestId(intentRequest.requestId).build())
+                .withDirective(SpeakDirective.builder().withSpeech(directiveText).build())
+                .build()
+            input.serviceClientFactory.directiveService.enqueue(sendDirectiveRequest)
+        }
 
         val minutes = MonitorWorker.getDepartures(slotValue.startsWith("oper"))
         val speechText = if (minutes < 0) "Failed to execute a request"
         else "Next departure is in $minutes minutes"
-        return input.responseBuilder
+        val response = input.responseBuilder
             .withSpeech(speechText)
             .withSimpleCard(skillName, speechText)
             .build()
+        progressiveResponseThread.join()
+        return response
     }
 }
