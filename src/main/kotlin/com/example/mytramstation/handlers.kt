@@ -18,6 +18,7 @@ import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillNameP
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.tramDirectionSlotName
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.busStopSlotName
 import com.example.mytramstation.monitor.Monitor
+import java.lang.Exception
 
 
 const val prompt = "You can ask departures in the specified direction"
@@ -95,29 +96,49 @@ class CancelAndStopIntentHandler : RequestHandler {
 }
 
 fun formatMinutes(minutes: Int) = "$minutes minute${if (minutes == 1) "" else "s"}"
+fun nextDeparturesOneLineString(minutes: List<Int>): String {
+    if (minutes.isEmpty())
+        return "No departures found"
+    return minutes.joinToString(prefix = "Next departures are in ") { formatMinutes(it) }
+}
+
+fun nextDeparturesSeveralLinesString(minutesAndLines: List<Pair<Int, String>>): String {
+    if (minutesAndLines.isEmpty())
+        return "No departures found"
+    return minutesAndLines.joinToString(prefix = "Next departures are in ") { "${formatMinutes(it.first)} ${it.second}" }
+}
 fun handleMonitorIntent(
     input: HandlerInput,
     intentRequest: IntentRequest,
     intentType: Monitor.MonitorIntentType
 ): Optional<Response> {
     val slotValue = intentRequest.intent.slots[
-            if (intentType == Monitor.MonitorIntentType.Tram) tramDirectionSlotName else busStopSlotName
+            if (intentType == Monitor.MonitorIntentType.MyTram) tramDirectionSlotName else busStopSlotName
     ]?.value ?: ""
 
     val progressiveResponseThread = thread {
         val directiveText =
-            "getting departures ${if (intentType == Monitor.MonitorIntentType.Tram) "in the direction of" else "from"} $slotValue"
+            "getting departures ${if (intentType == Monitor.MonitorIntentType.MyTram) "in the direction of" else "from"} $slotValue"
         val sendDirectiveRequest = SendDirectiveRequest.builder()
             .withHeader(Header.builder().withRequestId(intentRequest.requestId).build())
             .withDirective(SpeakDirective.builder().withSpeech(directiveText).build())
             .build()
         input.serviceClientFactory.directiveService.enqueue(sendDirectiveRequest)
-    }
+    }// TODO почему не работает?
 
-    // TODO несколько отправлений
-    val minutes = Monitor.getDepartures(Monitor.StopLocation.from(intentType, slotValue))
-    val speechText = if (minutes < 0) "Failed to execute a request"
-    else "Next departure is in ${formatMinutes(minutes)}"
+    val speechText = try {
+        if (intentType == Monitor.MonitorIntentType.MyTram) {
+            val minutes = Monitor.getDeparturesOneLine(Monitor.StopLocation.from(intentType, slotValue), 15, 2)
+            nextDeparturesOneLineString(minutes)
+        }
+        else {
+            val minutesAndLines = Monitor.getDeparturesSeveralLines(Monitor.StopLocation.from(intentType, slotValue), 15, 2)
+            nextDeparturesSeveralLinesString(minutesAndLines)
+        }
+    }
+    catch (e: Exception) {
+        "Failed to execute a request with an exception ${e.message}"
+    }
     val response = input.responseBuilder
         .withSpeech(speechText)
         .withSimpleCard(skillName, speechText)
@@ -132,7 +153,7 @@ class NextTramDeparturesIntentHandler : IntentRequestHandler {
     }
 
     override fun handle(input: HandlerInput, intentRequest: IntentRequest): Optional<Response> {
-        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.Tram)
+        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.MyTram)
     }
 }
 
@@ -142,7 +163,7 @@ class BusesIntentHandler : IntentRequestHandler {
     }
 
     override fun handle(input: HandlerInput, intentRequest: IntentRequest): Optional<Response> {
-        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.Bus)
+        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.MyBuses)
     }
 
 }

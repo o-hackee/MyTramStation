@@ -154,7 +154,6 @@ data class wlTrafficInfoAttributes(
     val relatedStops: String?
 )
 
-// TODO other request parameters
 interface MonitorService {
     @GET("monitor")
     fun getProperties(@Query("stopId") stopId: Int): Call<wlMonitorData>
@@ -166,8 +165,8 @@ object Monitor {
     }
 
     enum class MonitorIntentType {
-        Tram,
-        Bus
+        MyTram,
+        MyBuses
     }
 
     enum class StopLocation(
@@ -183,23 +182,40 @@ object Monitor {
         companion object {
             fun from(intentType: MonitorIntentType, slotValue: String): StopLocation {
                 return when (intentType) {
-                    MonitorIntentType.Tram -> if (slotValue.startsWith("oper")) Inzersdorf2Oper else Inzersdorf2Baden
-                    MonitorIntentType.Bus -> if (slotValue.startsWith("will")) WillendorferGasse else PurkytgasseBilla
+                    MonitorIntentType.MyTram -> if (slotValue.startsWith("oper")) Inzersdorf2Oper else Inzersdorf2Baden
+                    MonitorIntentType.MyBuses -> if (slotValue.startsWith("will")) WillendorferGasse else PurkytgasseBilla
                 }
             }
         }
     }
 
-    fun getDepartures(stopLocation: StopLocation): Int {
-        val request = Monitor.retrofitService
-        val call = request.getProperties(stopLocation.id)
-        return try {
-            val response = call.execute()
-            // TODO several monitors for buses - one per line
-            response.body()?.data?.monitors?.first()?.lines?.first()?.departures?.departure?.first()?.departureTime?.countdown
-                ?: -1
-        } catch (_: Exception) {
-            -2
-        }
+    fun getDeparturesOneLine(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<Int> {
+        val call = retrofitService.getProperties(stopLocation.id)
+        val responseBody = call.execute().body() ?: throw Exception("Failed to get response")
+        val departures = responseBody.data.monitors.firstOrNull()?.lines?.firstOrNull()?.departures?.departure
+            ?: throw Exception("No departure data in response")
+        // TODO добавить planned/real
+        var stillToTake = numberAtLeast
+        return departures.takeWhile {
+            val toTake = it.departureTime.countdown <= intervalMinutes || stillToTake > 0
+            if (toTake)
+                --stillToTake
+            toTake
+        }.map { it.departureTime.countdown }
+    }
+
+    fun getDeparturesSeveralLines(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<Pair<Int, String>> {
+        val call = retrofitService.getProperties(stopLocation.id)
+        val responseBody = call.execute().body() ?: throw Exception("Failed to get response")
+        val lines = responseBody.data.monitors.flatMap { it.lines ?: listOf() }
+        val departuresWithLines = lines.flatMap { outerIt -> outerIt.departures.departure?.map { Pair(it, outerIt) } ?: listOf() }
+            .sortedBy { it.first.departureTime.countdown }
+        var stillToTake = numberAtLeast
+        return departuresWithLines.takeWhile {
+            val toTake = it.first.departureTime.countdown <= intervalMinutes || stillToTake > 0
+            if (toTake)
+                --stillToTake
+            toTake
+        }.map { Pair(it.first.departureTime.countdown, "${it.second.name} to ${it.second.towards}") }
     }
 }
