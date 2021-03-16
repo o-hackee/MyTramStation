@@ -13,7 +13,7 @@ class MyTramStationStreamHandler : SkillStreamHandler(
             BusesIntentHandler(),
             HelpIntentHandler(),
             FallbackIntentHandler(),
-            CancelandStopIntentHandler(),
+            CancelAndStopIntentHandler(),
         )
         .withSkillId(skillId)
         .build()

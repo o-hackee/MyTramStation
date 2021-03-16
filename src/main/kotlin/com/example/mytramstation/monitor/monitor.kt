@@ -28,17 +28,23 @@ data class wlMonitorData(
 data class wlMessage(
     val value: String,
     val messageCode: String,
-    val serverTime: String
+    val serverTime: String // TODO datetime?
 )
 
 data class wlData(
-    val monitors: List<wlMonitor>
+    val monitors: List<wlMonitor>,
+    // TODO protestit'
+    val trafficInfoCategoryGroups: List<wlTrafficInfoCategoryGroup>?,
+    val trafficInfoCategories: List<wlTrafficInfoCategory>?,
+    val trafficInfos: List<wlTrafficInfo>?
 )
 
 data class wlMonitor(
     val locationStop: wlLocationStop,
-    val lines: List<wlLine>,
-    val attributes: Any
+    val lines: List<wlLine>?,
+    val refTrafficInfoNames: String?,
+    // TODO потестить бы: непонятно относительное расположение
+    val attributes: Any // @note not described in docu
 )
 
 data class wlLocationStop(
@@ -59,6 +65,7 @@ data class wlLocationProperties(
     val municipalityId: Int,
     val type: String,
     val coordName: String,
+    val gate: String?,
     val attributes: wlLocationAttributes
 )
 
@@ -72,16 +79,16 @@ data class wlLine(
     val direction: String,
     val platform: String,
     val richtungsId: String,
-    val barrierFree: Boolean,
-    val realtimeSupported: Boolean,
-    val trafficjam: Boolean,
+    val barrierFree: Boolean?,
+    val realtimeSupported: Boolean?,
+    val trafficjam: Boolean?,
     val departures: wlDepartures,
     val type: String,
-    val lineId: Int
+    val lineId: Int?
 )
 
 data class wlDepartures(
-    val departure: List<wlDeparture>
+    val departure: List<wlDeparture>?
 )
 
 data class wlDeparture(
@@ -90,8 +97,8 @@ data class wlDeparture(
 )
 
 data class wlDepartureTime(
-    val timePlanned: String,
-    val timeReal: String,
+    val timePlanned: String, // TODO datetime?
+    val timeReal: String?,
     val countdown: Int
 )
 
@@ -101,11 +108,50 @@ data class wlVehicle(
     val direction: String,
     val richtungsId: String,
     val barrierFree: Boolean,
+    val foldingRamp: Boolean?,
     val realtimeSupported: Boolean,
     val trafficjam: Boolean,
     val type: String,
-    val attributes: Any?,
+    val attributes: Any, // @note not described in docu
     val linienId: Int
+)
+
+// TODO потестить бы
+data class wlTrafficInfoCategoryGroup(
+    val id: Int,
+    val name: String
+)
+data class wlTrafficInfoCategory(
+    val id: Int,
+    val refTrafficInfoCategoryGroupId: Int,
+    val name: String,
+    val trafficInfoNameList: String,
+    val title: String
+)
+data class wlTrafficInfo(
+    val name: String,
+    val priority: String?,
+    val owner: String?,
+    val title: String,
+    val description: String,
+    val relatedLines: String?,
+    val relatedStops: String?,
+    val time: wlTrafficInfoTime?,
+    val attributes: wlTrafficInfoAttributes?
+)
+data class wlTrafficInfoTime(
+    val start: String?, // TODO datetime?
+    val end: String?,
+    val resume: String?
+)
+data class wlTrafficInfoAttributes(
+    val status: String?,
+    val station: String?,
+    val location: String?,
+    val reason: String?,
+    val towards: String?,
+    val relatedLines: String?,
+    val relatedStops: String?
 )
 
 // TODO other request parameters

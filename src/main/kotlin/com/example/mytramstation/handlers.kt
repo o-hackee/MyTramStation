@@ -80,7 +80,7 @@ class FallbackIntentHandler : RequestHandler {
 }
 
 
-class CancelandStopIntentHandler : RequestHandler {
+class CancelAndStopIntentHandler : RequestHandler {
     override fun canHandle(input: HandlerInput): Boolean {
         return input.matches(intentName("AMAZON.StopIntent").or(intentName("AMAZON.CancelIntent")))
     }
