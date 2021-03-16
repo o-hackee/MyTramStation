@@ -22,5 +22,8 @@ class MyTramStationStreamHandler : SkillStreamHandler(
         const val skillId = "amzn1.ask.skill.d037f536-96e8-4289-b6e5-cf5140eb4d56"
         const val skillName = "MyTramStation"
         const val skillNamePronounce = "my tram station"
+
+        const val tramDirectionSlotName = "tramDirection"
+        const val busStopSlotName = "busStop"
     }
 }

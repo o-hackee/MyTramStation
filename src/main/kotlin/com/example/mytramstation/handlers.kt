@@ -15,6 +15,8 @@ import kotlin.concurrent.thread
 
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillName
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillNamePronounce
+import com.example.mytramstation.MyTramStationStreamHandler.Companion.tramDirectionSlotName
+import com.example.mytramstation.MyTramStationStreamHandler.Companion.busStopSlotName
 import com.example.mytramstation.monitor.Monitor
 
 
@@ -92,13 +94,14 @@ class CancelandStopIntentHandler : RequestHandler {
     }
 }
 
+fun formatMinutes(minutes: Int) = "$minutes minute${if (minutes == 1) "" else "s"}"
 fun handleMonitorIntent(
     input: HandlerInput,
     intentRequest: IntentRequest,
     intentType: Monitor.MonitorIntentType
 ): Optional<Response> {
     val slotValue = intentRequest.intent.slots[
-            if (intentType == Monitor.MonitorIntentType.Tram) "tramDirection" else "busStop"
+            if (intentType == Monitor.MonitorIntentType.Tram) tramDirectionSlotName else busStopSlotName
     ]?.value ?: ""
 
     val progressiveResponseThread = thread {
@@ -111,11 +114,10 @@ fun handleMonitorIntent(
         input.serviceClientFactory.directiveService.enqueue(sendDirectiveRequest)
     }
 
-    // TODO several
-    // TODO minute vs minutes
+    // TODO несколько отправлений
     val minutes = Monitor.getDepartures(Monitor.StopLocation.from(intentType, slotValue))
     val speechText = if (minutes < 0) "Failed to execute a request"
-    else "Next departure is in $minutes minutes"
+    else "Next departure is in ${formatMinutes(minutes)}"
     val response = input.responseBuilder
         .withSpeech(speechText)
         .withSimpleCard(skillName, speechText)
