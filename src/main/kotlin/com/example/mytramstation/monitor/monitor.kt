@@ -3,6 +3,8 @@ package com.example.mytramstation.monitor
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -163,6 +165,8 @@ interface MonitorService {
 }
 
 object Monitor {
+    private val logger: Logger = LoggerFactory.getLogger(Monitor::class.java)
+
     private val retrofitService: MonitorService by lazy {
         retrofit.create(MonitorService::class.java)
     }
@@ -192,9 +196,16 @@ object Monitor {
         }
     }
 
+    private fun logTrafficInfo(data: wlData) {
+        data.trafficInfoCategoryGroups?.forEach { logger.info(it.toString()) }
+        data.trafficInfoCategories?.forEach { logger.info(it.toString()) }
+        data.trafficInfos?.forEach { logger.info(it.toString()) }
+    }
+
     fun getDeparturesOneLine(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<Int> {
         val call = retrofitService.getProperties(stopLocation.id)
         val responseBody = call.execute().body() ?: throw Exception("Failed to get response")
+        logTrafficInfo(responseBody.data)
         val departures = responseBody.data.monitors.firstOrNull()?.lines?.firstOrNull()?.departures?.departure
             ?: throw Exception("No departure data in response")
         // TODO добавить planned/real
@@ -210,6 +221,7 @@ object Monitor {
     fun getDeparturesSeveralLines(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<Pair<Int, String>> {
         val call = retrofitService.getProperties(stopLocation.id)
         val responseBody = call.execute().body() ?: throw Exception("Failed to get response")
+        logTrafficInfo(responseBody.data)
         val lines = responseBody.data.monitors.flatMap { it.lines ?: listOf() }
         val departuresWithLines = lines.flatMap { outerIt -> outerIt.departures.departure?.map { Pair(it, outerIt) } ?: listOf() }
             .sortedBy { it.first.departureTime.countdown }

@@ -18,6 +18,8 @@ import com.example.mytramstation.MyTramStationStreamHandler.Companion.skillNameP
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.tramDirectionSlotName
 import com.example.mytramstation.MyTramStationStreamHandler.Companion.busStopSlotName
 import com.example.mytramstation.monitor.Monitor
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.lang.Exception
 
 
@@ -110,11 +112,18 @@ fun nextDeparturesSeveralLinesString(minutesAndLines: List<Pair<Int, String>>): 
 fun handleMonitorIntent(
     input: HandlerInput,
     intentRequest: IntentRequest,
-    intentType: Monitor.MonitorIntentType
+    intentType: Monitor.MonitorIntentType,
+    logger: Logger
 ): Optional<Response> {
-    val slotValue = intentRequest.intent.slots[
+    val slot = intentRequest.intent.slots[
             if (intentType == Monitor.MonitorIntentType.MyTram) tramDirectionSlotName else busStopSlotName
-    ]?.value ?: ""
+    ]
+    val slotValue: String
+    if (slot == null) {
+        slotValue = ""
+        logger.error("empty slot value")
+    } else
+        slotValue = slot.value
 
     val progressiveResponseThread = thread {
         val directiveText =
@@ -128,7 +137,7 @@ fun handleMonitorIntent(
 
     val speechText = try {
         if (intentType == Monitor.MonitorIntentType.MyTram) {
-            val minutes = Monitor.getDeparturesOneLine(Monitor.StopLocation.from(intentType, slotValue), 15, 2)
+            val minutes = Monitor.getDeparturesOneLine(Monitor.StopLocation.from(intentType, slotValue), 20, 2)
             nextDeparturesOneLineString(minutes)
         }
         else {
@@ -137,6 +146,7 @@ fun handleMonitorIntent(
         }
     }
     catch (e: Exception) {
+        logger.error(e.message)
         "Failed to execute a request with an exception ${e.message}"
     }
     val response = input.responseBuilder
@@ -148,22 +158,26 @@ fun handleMonitorIntent(
 }
 
 class NextTramDeparturesIntentHandler : IntentRequestHandler {
+    private val logger: Logger = LoggerFactory.getLogger(NextTramDeparturesIntentHandler::class.java)
+
     override fun canHandle(input: HandlerInput, intentRequest: IntentRequest): Boolean {
         return input.matches(intentName("nextTramDepartures"))
     }
 
     override fun handle(input: HandlerInput, intentRequest: IntentRequest): Optional<Response> {
-        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.MyTram)
+        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.MyTram, logger)
     }
 }
 
 class BusesIntentHandler : IntentRequestHandler {
+    private val logger: Logger = LoggerFactory.getLogger(BusesIntentHandler::class.java)
+
     override fun canHandle(input: HandlerInput, intentRequest: IntentRequest): Boolean {
         return input.matches(intentName("buses"))
     }
 
     override fun handle(input: HandlerInput, intentRequest: IntentRequest): Optional<Response> {
-        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.MyBuses)
+        return handleMonitorIntent(input, intentRequest, Monitor.MonitorIntentType.MyBuses, logger)
     }
 
 }
