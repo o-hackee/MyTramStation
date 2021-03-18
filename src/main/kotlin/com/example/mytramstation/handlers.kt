@@ -98,16 +98,20 @@ class CancelAndStopIntentHandler : RequestHandler {
 }
 
 fun formatMinutes(minutes: Int) = "$minutes minute${if (minutes == 1) "" else "s"}"
-fun nextDeparturesOneLineString(minutes: List<Int>): String {
+fun nextDeparturesOneLineString(minutes: List<Monitor.TramDeparture>): String {
     if (minutes.isEmpty())
         return "No departures found"
-    return minutes.joinToString(prefix = "Next departures are in ") { formatMinutes(it) }
+    return minutes.joinToString(prefix = "Next departures are in ") {
+        "${formatMinutes(it.countdown)}${if (it.isLate) " (being late)" else ""}"
+    }
 }
 
-fun nextDeparturesSeveralLinesString(minutesAndLines: List<Pair<Int, String>>): String {
+fun nextDeparturesSeveralLinesString(minutesAndLines: List<Monitor.BusDeparture>): String {
     if (minutesAndLines.isEmpty())
         return "No departures found"
-    return minutesAndLines.joinToString(prefix = "Next departures are in ") { "${formatMinutes(it.first)} ${it.second}" }
+    return minutesAndLines.joinToString(prefix = "Next departures are in ") {
+        "${formatMinutes(it.countdown)} ${it.lineName} to ${it.towards}${if (it.isLate) " (being late)" else ""}"
+    }
 }
 fun handleMonitorIntent(
     input: HandlerInput,

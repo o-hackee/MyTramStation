@@ -12,8 +12,13 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 import java.lang.Exception
 import java.util.Date
+import java.util.concurrent.TimeUnit
 
 private const val BASE_URL = "http://www.wienerlinien.at/ogd_realtime/"
+
+// https://www.data.gv.at/katalog/dataset/522d3045-0b37-48d0-b868-57c99726b1c4
+// https://www.wienerlinien.at/ogd_realtime/doku/ogd/wienerlinien-echtzeitdaten-dokumentation.pdf
+// https://www.wienerlinien.at/ogd_realtime/monitor?stopId=1914
 
 private val moshi = Moshi.Builder()
     .add(KotlinJsonAdapterFactory())
@@ -196,29 +201,47 @@ object Monitor {
         }
     }
 
+    data class TramDeparture(
+        val countdown: Int,
+        val isLate: Boolean
+    )
+
+    data class BusDeparture(
+        val countdown: Int,
+        val lineName: String,
+        val towards: String,
+        val isLate: Boolean
+    )
+
+    private fun wlDepartureTime.isLate(): Boolean = if (this.timeReal == null)
+        false
+    else
+        this.timeReal.time - this.timePlanned.time > TimeUnit.SECONDS.toMillis(90)
+
     private fun logTrafficInfo(data: wlData) {
         data.trafficInfoCategoryGroups?.forEach { logger.info(it.toString()) }
         data.trafficInfoCategories?.forEach { logger.info(it.toString()) }
         data.trafficInfos?.forEach { logger.info(it.toString()) }
     }
 
-    fun getDeparturesOneLine(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<Int> {
+    fun getDeparturesOneLine(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<TramDeparture> {
         val call = retrofitService.getProperties(stopLocation.id)
         val responseBody = call.execute().body() ?: throw Exception("Failed to get response")
         logTrafficInfo(responseBody.data)
         val departures = responseBody.data.monitors.firstOrNull()?.lines?.firstOrNull()?.departures?.departure
             ?: throw Exception("No departure data in response")
-        // TODO добавить planned/real
         var stillToTake = numberAtLeast
         return departures.takeWhile {
             val toTake = it.departureTime.countdown <= intervalMinutes || stillToTake > 0
             if (toTake)
                 --stillToTake
             toTake
-        }.map { it.departureTime.countdown }
+        }.map { TramDeparture(it.departureTime.countdown,
+            it.departureTime.isLate()
+        ) }
     }
 
-    fun getDeparturesSeveralLines(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<Pair<Int, String>> {
+    fun getDeparturesSeveralLines(stopLocation: StopLocation, intervalMinutes: Int, numberAtLeast: Int): List<BusDeparture> {
         val call = retrofitService.getProperties(stopLocation.id)
         val responseBody = call.execute().body() ?: throw Exception("Failed to get response")
         logTrafficInfo(responseBody.data)
@@ -231,6 +254,10 @@ object Monitor {
             if (toTake)
                 --stillToTake
             toTake
-        }.map { Pair(it.first.departureTime.countdown, "${it.second.name} to ${it.second.towards}") }
+        }.map { BusDeparture(
+            it.first.departureTime.countdown,
+            it.second.name,
+            it.second.towards,
+            it.first.departureTime.isLate()) }
     }
 }
