@@ -219,6 +219,13 @@ object Monitor {
         this.timeReal.time - this.timePlanned.time > TimeUnit.SECONDS.toMillis(90)
 
     private fun logTrafficInfo(data: wlData) {
+        with(data) {
+            if (trafficInfoCategoryGroups?.isNotEmpty() == true ||
+                trafficInfoCategories?.isNotEmpty() == true ||
+                trafficInfos?.isNotEmpty() == true
+                )
+                logger.info("traffic info:")
+        }
         data.trafficInfoCategoryGroups?.forEach { logger.info(it.toString()) }
         data.trafficInfoCategories?.forEach { logger.info(it.toString()) }
         data.trafficInfos?.forEach { logger.info(it.toString()) }

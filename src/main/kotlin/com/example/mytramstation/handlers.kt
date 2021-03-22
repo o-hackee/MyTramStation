@@ -119,6 +119,8 @@ fun handleMonitorIntent(
     intentType: Monitor.MonitorIntentType,
     logger: Logger
 ): Optional<Response> {
+    logger.info(intentRequest.intent.toString())
+
     val slot = intentRequest.intent.slots[
             if (intentType == Monitor.MonitorIntentType.MyTram) tramDirectionSlotName else busStopSlotName
     ]
